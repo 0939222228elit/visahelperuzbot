@@ -2,8 +2,9 @@
 
 import logging
 from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils import executor
+import asyncio
 from text_templates import *
 from questions import questions
 
@@ -13,12 +14,12 @@ ADMIN_ID = 7406187939
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 user_data = {}
 
 # Стартовая команда
-@dp.message_handler(commands=['start'])
+@dp.message(CommandStart())
 async def send_welcome(message: types.Message):
     user_data[message.chat.id] = {"step": 0, "score": 0}
     await message.answer(start_text)
@@ -37,7 +38,7 @@ async def send_question(chat_id):
         await show_results(chat_id)
 
 # Обработчик всех сообщений
-@dp.message_handler()
+@dp.message()
 async def handle_answer(message: types.Message):
     chat_id = message.chat.id
     if chat_id not in user_data:
@@ -69,9 +70,13 @@ async def show_results(chat_id):
     await bot.send_message(chat_id, ask_continue_text, reply_markup=markup)
 
 # Альтернативный путь
-@dp.message_handler(lambda message: message.text == "Узнать об альтернативном пути")
+@dp.message(lambda message: message.text == "Узнать об альтернативном пути")
 async def send_alternative(message: types.Message):
     await message.answer(alternative_info_text, disable_web_page_preview=True)
 
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
