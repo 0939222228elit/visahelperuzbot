@@ -1,17 +1,21 @@
-from aiogram import Bot, Dispatcher, types, executor
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message
+from aiogram.filters import Command
+import asyncio
+import os
 
-# Твой токен бота
-TOKEN = '7485677471:AAHXNl3oDsVaE1Q0SvFT2eyuy0-1lpSWxDg'
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# Создание объектов бота и диспетчера
-bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-# Хэндлер на команду /start
-@dp.message_handler(commands=['start', 'help'])
-async def send_welcome(message: types.Message):
-    await message.reply("Привет, Roman! Я VisaHelperUzBot. Чем могу помочь?")
+@dp.message(Command("start"))
+async def start(message: Message):
+    await message.answer("Привет! Бот успешно запущен.")
 
-# Запуск бота
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
