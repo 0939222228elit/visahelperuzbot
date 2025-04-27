@@ -14,7 +14,7 @@ user_data = {}
 
 @dp.message(F.text == "/start")
 async def start_handler(message: Message):
-    await message.answer(text_templates.start_message)
+    await message.answer(text_templates.start_text)
     user_data[message.chat.id] = {"answers": [], "current_q": 0}
     await message.answer(questions.QUESTIONS[0])
 
