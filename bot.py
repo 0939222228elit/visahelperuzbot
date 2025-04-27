@@ -1,85 +1,77 @@
-import logging
-import asyncio
-from aiogram import Bot, Dispatcher, types, executor
-from config import BOT_TOKEN, ADMIN_ID
-from questions import questions
-from text_templates import *
+# bot.py
 
-# Включаем логирование
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils import executor
+from text_templates import *
+from questions import questions
+
+API_TOKEN = '6739363328:AAEqJpApA4b3DLSf1AnPgw2-mWNHgHCeEpg'
+ADMIN_ID = 7406187939
+
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация бота и диспетчера
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# Хранилище для ответов пользователей
 user_data = {}
 
+# Стартовая команда
 @dp.message_handler(commands=['start'])
-async def start_handler(message: types.Message):
-    user_data[message.from_user.id] = {
-        'step': 0,
-        'answers': []
-    }
+async def send_welcome(message: types.Message):
+    user_data[message.chat.id] = {"step": 0, "score": 0}
     await message.answer(start_text)
-    await asyncio.sleep(1)
-    await ask_next_question(message.from_user.id)
+    await send_question(message.chat.id)
 
-async def ask_next_question(user_id):
-    user = user_data.get(user_id)
-    if user is None:
-        return
-    step = user['step']
+# Функция отправки вопроса
+async def send_question(chat_id):
+    step = user_data[chat_id]["step"]
     if step < len(questions):
-        question_text = questions[step]["text"]
-        await bot.send_message(user_id, question_text)
+        question = questions[step]
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        for option in question["options"]:
+            markup.add(KeyboardButton(option))
+        await bot.send_message(chat_id, question["question"], reply_markup=markup)
     else:
-        await evaluate_user(user_id)
+        await show_results(chat_id)
 
-@dp.message_handler(lambda message: message.from_user.id in user_data)
-async def handle_answers(message: types.Message):
-    user = user_data[message.from_user.id]
-    user['answers'].append(message.text)
-    user['step'] += 1
-    await ask_next_question(message.from_user.id)
-
-async def evaluate_user(user_id):
-    user = user_data.get(user_id)
-    if not user:
+# Обработчик всех сообщений
+@dp.message_handler()
+async def handle_answer(message: types.Message):
+    chat_id = message.chat.id
+    if chat_id not in user_data:
+        await message.answer("Пожалуйста, нажмите /start чтобы начать.")
         return
-    
-    answers = user['answers']
-    
-    # Логика оценки шансов
-    score = 0
 
-    language_level = answers[0].lower()
-    work_experience = int(answers[1])
-    diploma = answers[2].lower()
-    profession = answers[3].lower()
-
-    if language_level in ['b1', 'b2', 'c1', 'c2']:
-        score += 40
-    if work_experience >= 2:
-        score += 30
-    if diploma == 'да':
-        score += 20
-    if profession in ['айтишник', 'строитель', 'инженер', 'медик']:
-        score += 10
-
-    result_message = f"Ваши шансы на получение визы в Германию: {score}%\n\n"
-
-    if score >= 80:
-        result_message += success_text
+    step = user_data[chat_id]["step"]
+    if step < len(questions):
+        try:
+            selected = questions[step]["options"].index(message.text)
+            user_data[chat_id]["score"] += questions[step]["weight"][selected]
+            user_data[chat_id]["step"] += 1
+            await send_question(chat_id)
+        except ValueError:
+            await message.answer("Пожалуйста, выберите вариант из предложенных кнопок.")
     else:
-        result_message += alternative_offer_text
+        await show_results(chat_id)
 
-    await bot.send_message(user_id, result_message)
-    await bot.send_message(user_id, finish_text)
-    
-    # Удаляем данные пользователя после оценки
-    del user_data[user_id]
+# Функция вывода результата
+async def show_results(chat_id):
+    score = user_data[chat_id]["score"]
+    if score >= 9:
+        await bot.send_message(chat_id, high_chances_text, disable_web_page_preview=True)
+    else:
+        await bot.send_message(chat_id, low_chances_text, disable_web_page_preview=True)
 
-# Старт бота
-if __name__ == "__main__":
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('Узнать об альтернативном пути'))
+    await bot.send_message(chat_id, ask_continue_text, reply_markup=markup)
+
+# Альтернативный путь
+@dp.message_handler(lambda message: message.text == "Узнать об альтернативном пути")
+async def send_alternative(message: types.Message):
+    await message.answer(alternative_info_text, disable_web_page_preview=True)
+
+if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
