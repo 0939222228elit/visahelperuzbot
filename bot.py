@@ -1,81 +1,72 @@
-# bot.py
-
-import logging
+import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-import asyncio
-from text_templates import *
-from questions import questions
+from config import BOT_TOKEN, ADMIN_ID
+import questions
+import text_templates
 
-API_TOKEN = '6739363328:AAEqJpApA4b3DLSf1AnPgw2-mWNHgHCeEpg'
-ADMIN_ID = 7406187939
-
-logging.basicConfig(level=logging.INFO)
-
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+async def start_handler(message: types.Message):
+    await message.answer(text_templates.start_message)
+    await ask_questions(message.chat.id)
 
 user_data = {}
 
-# Стартовая команда
-@dp.message(CommandStart())
-async def send_welcome(message: types.Message):
-    user_data[message.chat.id] = {"step": 0, "score": 0}
-    await message.answer(start_text)
-    await send_question(message.chat.id)
+async def ask_questions(chat_id):
+    user_data[chat_id] = {"answers": [], "current_q": 0}
+    await bot.send_message(chat_id, questions.QUESTIONS[0])
 
-# Функция отправки вопроса
-async def send_question(chat_id):
-    step = user_data[chat_id]["step"]
-    if step < len(questions):
-        question = questions[step]
-        markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        for option in question["options"]:
-            markup.add(KeyboardButton(option))
-        await bot.send_message(chat_id, question["question"], reply_markup=markup)
-    else:
-        await show_results(chat_id)
-
-# Обработчик всех сообщений
 @dp.message()
-async def handle_answer(message: types.Message):
+async def handle_answers(message: types.Message):
     chat_id = message.chat.id
     if chat_id not in user_data:
-        await message.answer("Пожалуйста, нажмите /start чтобы начать.")
         return
 
-    step = user_data[chat_id]["step"]
-    if step < len(questions):
-        try:
-            selected = questions[step]["options"].index(message.text)
-            user_data[chat_id]["score"] += questions[step]["weight"][selected]
-            user_data[chat_id]["step"] += 1
-            await send_question(chat_id)
-        except ValueError:
-            await message.answer("Пожалуйста, выберите вариант из предложенных кнопок.")
+    data = user_data[chat_id]
+    current_q = data["current_q"]
+
+    data["answers"].append(message.text)
+    data["current_q"] += 1
+
+    if data["current_q"] < len(questions.QUESTIONS):
+        await bot.send_message(chat_id, questions.QUESTIONS[data["current_q"]])
     else:
-        await show_results(chat_id)
+        result = evaluate_answers(data["answers"])
+        await bot.send_message(chat_id, result)
+        await bot.send_message(ADMIN_ID, f"Новая заявка: {data['answers']}")
+        user_data.pop(chat_id)
 
-# Функция вывода результата
-async def show_results(chat_id):
-    score = user_data[chat_id]["score"]
-    if score >= 9:
-        await bot.send_message(chat_id, high_chances_text, disable_web_page_preview=True)
+def evaluate_answers(answers):
+    score = 0
+
+    try:
+        age = int(answers[0])
+        if 20 <= age <= 55:
+            score += 1
+    except:
+        pass
+
+    if answers[1].lower() in ["да", "имеется"]:
+        score += 1
+    if answers[2].lower() in ["да", "имеется"]:
+        score += 1
+    if answers[3].lower() in ["да", "имеется"]:
+        score += 1
+    if answers[4].lower() in ["да", "есть"]:
+        score += 1
+
+    percentage = int((score / 5) * 100)
+
+    if percentage >= 80:
+        return text_templates.high_chance_text
     else:
-        await bot.send_message(chat_id, low_chances_text, disable_web_page_preview=True)
-
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton('Узнать об альтернативном пути'))
-    await bot.send_message(chat_id, ask_continue_text, reply_markup=markup)
-
-# Альтернативный путь
-@dp.message(lambda message: message.text == "Узнать об альтернативном пути")
-async def send_alternative(message: types.Message):
-    await message.answer(alternative_info_text, disable_web_page_preview=True)
+        return text_templates.low_chance_text
 
 async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
+    dp.message.register(start_handler, CommandStart())
+    dp.message.register(handle_answers)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
