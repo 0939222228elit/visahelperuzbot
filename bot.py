@@ -1,6 +1,8 @@
 import asyncio
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 from config import BOT_TOKEN, ADMIN_ID
 import questions
 import text_templates
@@ -8,22 +10,27 @@ import text_templates
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+class Form(StatesGroup):
+    waiting_for_answer = State()
+
 user_data = {}
 
 @dp.message(CommandStart())
-async def start_handler(message: types.Message):
+async def start_handler(message: types.Message, state: FSMContext):
     await message.answer(text_templates.start_text)
     user_data[message.chat.id] = {"answers": [], "current_q": 0}
     await bot.send_message(message.chat.id, questions.QUESTIONS[0])
+    await state.set_state(Form.waiting_for_answer)
 
-@dp.message()
-async def handle_answers(message: types.Message):
+@dp.message(Form.waiting_for_answer)
+async def handle_answer(message: types.Message, state: FSMContext):
     chat_id = message.chat.id
-    if chat_id not in user_data:
+    data = user_data.get(chat_id)
+
+    if not data:
         await message.answer("Нажмите /start для начала опроса.")
         return
 
-    data = user_data[chat_id]
     data["answers"].append(message.text)
     data["current_q"] += 1
 
@@ -34,6 +41,7 @@ async def handle_answers(message: types.Message):
         await bot.send_message(chat_id, result)
         await bot.send_message(ADMIN_ID, f"Новая анкета: {data['answers']}")
         user_data.pop(chat_id)
+        await state.clear()
 
 def evaluate_answers(answers):
     score = 0
