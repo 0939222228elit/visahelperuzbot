@@ -1,86 +1,71 @@
-           bot.py
+import asyncio
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from config import BOT_TOKEN, ADMIN_ID
+import questions
+import text_templates
 
-import asyncio from aiogram import Bot, Dispatcher, F, types from aiogram.filters import CommandStart from aiogram.fsm.context import FSMContext from aiogram.fsm.state import State, StatesGroup from config import BOT_TOKEN, ADMIN_ID import text_templates
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-FSM States
+user_data = {}
 
-class Form(StatesGroup): age = State() profession = State() diploma = State() experience = State() language = State() invitation = State()
+@dp.message(CommandStart())
+async def start_handler(message: types.Message):
+    await message.answer(text_templates.start_text)
+    user_data[message.chat.id] = {"answers": [], "current_q": 0}
+    await bot.send_message(message.chat.id, questions.QUESTIONS[0])
 
-Init
+@dp.message()
+async def handle_answers(message: types.Message):
+    chat_id = message.chat.id
+    if chat_id not in user_data:
+        await message.answer("Пожалуйста, нажмите /start для начала.")
+        return
 
-bot = Bot(token=BOT_TOKEN) dp = Dispatcher()
+    data = user_data[chat_id]
+    data["answers"].append(message.text)
+    data["current_q"] += 1
 
-Start command
+    if data["current_q"] < len(questions.QUESTIONS):
+        await bot.send_message(chat_id, questions.QUESTIONS[data["current_q"]])
+    else:
+        result = evaluate_answers(data["answers"])
+        await bot.send_message(chat_id, result)
+        await bot.send_message(ADMIN_ID, f"Новая анкета от {chat_id}: {data['answers']}")
+        user_data.pop(chat_id)
 
-@dp.message(CommandStart()) async def start(message: types.Message, state: FSMContext): await message.answer(text_templates.start_text) await message.answer("Сколько вам лет?") await state.set_state(Form.age)
+def evaluate_answers(answers):
+    score = 0
+    try:
+        age = int(answers[0])
+        if 20 <= age <= 55:
+            score += 1
+    except:
+        pass
 
-Age
-
-@dp.message(Form.age) async def process_age(message: types.Message, state: FSMContext): await state.update_data(age=message.text) await message.answer("Какая у вас профессия? (например, строитель, сварщик, инженер)") await state.set_state(Form.profession)
-
-Profession
-
-@dp.message(Form.profession) async def process_profession(message: types.Message, state: FSMContext): await state.update_data(profession=message.text) await message.answer("Есть ли у вас диплом или профильное образование? (Да/Нет)") await state.set_state(Form.diploma)
-
-Diploma
-
-@dp.message(Form.diploma) async def process_diploma(message: types.Message, state: FSMContext): await state.update_data(diploma=message.text) await message.answer("Есть ли у вас опыт работы по специальности минимум 2 года? (Да/Нет)") await state.set_state(Form.experience)
-
-Experience
-
-@dp.message(Form.experience) async def process_experience(message: types.Message, state: FSMContext): await state.update_data(experience=message.text) await message.answer("Какой у вас уровень немецкого языка? (например, B1, A2, нет)") await state.set_state(Form.language)
-
-Language
-
-@dp.message(Form.language) async def process_language(message: types.Message, state: FSMContext): await state.update_data(language=message.text) await message.answer("Есть ли у вас приглашение на работу в Германию? (Да/Нет)") await state.set_state(Form.invitation)
-
-Invitation and Final Result
-
-@dp.message(Form.invitation) async def process_invitation(message: types.Message, state: FSMContext): await state.update_data(invitation=message.text) data = await state.get_data()
-
-# Scoring logic
-score = 0
-try:
-    age = int(data['age'])
-    if 20 <= age <= 55:
+    good_professions = ["строитель", "сварщик", "инженер", "электрик", "водитель", "механик"]
+    if any(prof in answers[1].lower() for prof in good_professions):
         score += 1
-except ValueError:
-    pass
 
-allowed_professions = ["строитель", "сварщик", "инженер", "электрик", "повар", "механик", "водитель", "маляр", "каменщик", "монтажник"]
-if data['profession'].lower() in allowed_professions:
-    score += 1
+    if answers[2].lower() in ["да", "имеется"]:
+        score += 1
 
-if data['diploma'].lower() == "да":
-    score += 1
-if data['experience'].lower() == "да":
-    score += 1
-if data['language'].lower() == "b1":
-    score += 1
-if data['invitation'].lower() == "да":
-    score += 1
+    if answers[3].lower() == "b1":
+        score += 1
 
-percentage = int((score / 6) * 100)
+    if answers[4].lower() in ["да", "есть"]:
+        score += 1
 
-# Send results
-if percentage >= 70:
-    await message.answer(text_templates.high_chances_text)
-else:
-    await message.answer(text_templates.low_chances_text, reply_markup=text_templates.more_info_keyboard)
+    percentage = int((score / 5) * 100)
 
-# Notify admin
-await bot.send_message(ADMIN_ID, f"Новая анкета от {message.chat.id}: {data}")
+    if percentage >= 80:
+        return text_templates.high_chance_text
+    else:
+        return text_templates.low_chance_text
 
-await state.clear()
+async def main():
+    await dp.start_polling(bot)
 
-Alternative handler
-
-@dp.message(F.text == "Хочу узнать подробнее") async def send_alternative_info(message: types.Message): await message.answer(text_templates.alternative_info_text)
-
-Main
-
-async def main(): await dp.start_polling(bot)
-
-if name == "main": asyncio.run(main())
-
- 
+if __name__ == "__main__":
+    asyncio.run(main())
