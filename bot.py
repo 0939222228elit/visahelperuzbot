@@ -1,49 +1,42 @@
 import asyncio
-from aiogram import Bot, Dispatcher, F, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from config import BOT_TOKEN, ADMIN_ID
-import questions
 import text_templates
+import questions
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-class Form(StatesGroup):
-    waiting_for_answer = State()
-
-user_data = {}
+# Храним ответы пользователей
+user_states = {}
 
 @dp.message(CommandStart())
-async def start_handler(message: types.Message, state: FSMContext):
+async def cmd_start(message: types.Message):
     await message.answer(text_templates.start_text)
-    user_data[message.chat.id] = {"answers": [], "current_q": 0}
+    user_states[message.chat.id] = {"answers": [], "current_question": 0}
     await bot.send_message(message.chat.id, questions.QUESTIONS[0])
-    await state.set_state(Form.waiting_for_answer)
 
-@dp.message(Form.waiting_for_answer)
-async def handle_answer(message: types.Message, state: FSMContext):
+@dp.message()
+async def answer_handler(message: types.Message):
     chat_id = message.chat.id
-    data = user_data.get(chat_id)
-
-    if not data:
-        await message.answer("Нажмите /start для начала опроса.")
+    if chat_id not in user_states:
+        await message.answer("Пожалуйста, нажмите /start чтобы начать заново.")
         return
 
-    data["answers"].append(message.text)
-    data["current_q"] += 1
+    user_data = user_states[chat_id]
+    user_data["answers"].append(message.text)
+    user_data["current_question"] += 1
 
-    if data["current_q"] < len(questions.QUESTIONS):
-        await bot.send_message(chat_id, questions.QUESTIONS[data["current_q"]])
+    if user_data["current_question"] < len(questions.QUESTIONS):
+        await bot.send_message(chat_id, questions.QUESTIONS[user_data["current_question"]])
     else:
-        result = evaluate_answers(data["answers"])
-        await bot.send_message(chat_id, result)
-        await bot.send_message(ADMIN_ID, f"Новая анкета: {data['answers']}")
-        user_data.pop(chat_id)
-        await state.clear()
+        result = evaluate(user_data["answers"])
+        await message.answer(result)
+        await bot.send_message(ADMIN_ID, f"Новая анкета:\n{user_data['answers']}")
+        user_states.pop(chat_id)
 
-def evaluate_answers(answers):
+def evaluate(answers):
     score = 0
     try:
         age = int(answers[0])
@@ -56,7 +49,7 @@ def evaluate_answers(answers):
         if answer.lower() in ["да", "имеется", "есть"]:
             score += 1
 
-    percentage = int((score / 5) * 100)
+    percentage = (score / 5) * 100
 
     if percentage >= 80:
         return text_templates.high_chances_text
