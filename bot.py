@@ -8,6 +8,7 @@ import text_templates
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Словарь для хранения данных пользователя
 user_data = {}
 
 @dp.message(CommandStart())
@@ -15,6 +16,7 @@ async def start_handler(message: types.Message):
     chat_id = message.chat.id
     user_data[chat_id] = {"answers": [], "current_q": 0}
     await message.answer(text_templates.start_text)
+    await asyncio.sleep(0.5)
     await message.answer(questions.QUESTIONS[0])
 
 @dp.message(F.text)
@@ -27,20 +29,25 @@ async def handle_answers(message: types.Message):
 
     data = user_data[chat_id]
 
-    # Сохраняем ответ
-    data["answers"].append(message.text)
+    # Проверяем правильность структуры
+    if "current_q" not in data or "answers" not in data:
+        user_data[chat_id] = {"answers": [], "current_q": 0}
+        await message.answer("Произошла ошибка. Нажмите /start чтобы начать заново.")
+        return
 
-    # Переходим к следующему вопросу
-    data["current_q"] += 1
+    # Записываем ответ
+    if data["current_q"] < len(questions.QUESTIONS):
+        data["answers"].append(message.text)
+        data["current_q"] += 1
 
+    # Следующий вопрос или результат
     if data["current_q"] < len(questions.QUESTIONS):
         await message.answer(questions.QUESTIONS[data["current_q"]])
     else:
-        # Все вопросы пройдены
         result = evaluate_answers(data["answers"])
         await message.answer(result)
         await bot.send_message(ADMIN_ID, f"Новая анкета от {chat_id}: {data['answers']}")
-        user_data.pop(chat_id)  # очищаем пользователя
+        user_data.pop(chat_id)
 
 def evaluate_answers(answers):
     score = 0
@@ -48,7 +55,7 @@ def evaluate_answers(answers):
         age = int(answers[0])
         if 20 <= age <= 55:
             score += 1
-    except:
+    except ValueError:
         pass
 
     for answer in answers[1:]:
