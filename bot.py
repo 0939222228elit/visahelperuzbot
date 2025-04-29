@@ -102,14 +102,10 @@ async def collect_user_comment(message: types.Message, state: FSMContext):
     await state.update_data(user_comment=message.text)
     data = await state.get_data()
     summary = (
-        f"📥 Новая заявка:
-"
-        f"👤 Имя: {data.get('user_name')}
-"
-        f"📞 Контакт: {data.get('user_contact')}
-"
-        f"💬 Комментарий: {data.get('user_comment')}
-"
+        f"📥 Новая заявка:\n"
+        f"👤 Имя: {data.get('user_name')}\n"
+        f"📞 Контакт: {data.get('user_contact')}\n"
+        f"💬 Комментарий: {data.get('user_comment')}\n"
         f"🔗 Telegram: @{message.from_user.username or message.from_user.id}"
     )
     await bot.send_message(ADMIN_ID, summary)
