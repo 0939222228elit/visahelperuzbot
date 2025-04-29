@@ -26,6 +26,7 @@ dp = Dispatcher()
 
 # FSM Start
 async def start(message: types.Message, state: FSMContext):
+    await bot.send_message(ADMIN_ID, f"📥 Новый пользователь: @{message.from_user.username or message.from_user.id}")
     await message.answer(text_templates.start_text)
     await asyncio.sleep(1.5)
     await message.answer(questions.QUESTIONS[0])
@@ -73,7 +74,7 @@ async def process_invitation(message: types.Message, state: FSMContext):
 # FSM Responses After Low Chance Path
 async def handle_low_chance_choice(message: types.Message, state: FSMContext):
     text = message.text.lower()
-    if "реальное решение" in text:
+    if "реальное решение" in text or "хочу узнать" in text:
         await message.answer(text_templates.alternative_offer, reply_markup=alternative_offer_keyboard())
     elif "почему я не подхожу" in text:
         await message.answer(text_templates.rejection_reasons, reply_markup=back_to_start_keyboard())
@@ -109,7 +110,7 @@ async def collect_user_comment(message: types.Message, state: FSMContext):
         f"🔗 Telegram: @{message.from_user.username or message.from_user.id}"
     )
     await bot.send_message(ADMIN_ID, summary)
-    await message.answer("Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время ✅")
+    await message.answer("✅ Спасибо! Мы получили вашу заявку. Координатор скоро свяжется с вами.\n\nПока ждёте — подпишитесь на наш Instagram: https://instagram.com/...")
     await state.clear()
 
 # Support Functions
@@ -138,22 +139,22 @@ def evaluate_answers(data):
 def low_chance_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔘 Хочу реальное решение")],
-            [KeyboardButton(text="🔘 Почему я не подхожу?")],
+            [KeyboardButton(text="🔥 Хочу узнать")],
+            [KeyboardButton(text="📋 Почему я не подхожу?")],
         ],
         resize_keyboard=True
     )
 
 def back_to_start_keyboard():
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🔘 Назад")]], resize_keyboard=True
+        keyboard=[[KeyboardButton(text="🔙 Назад")]], resize_keyboard=True
     )
 
 def alternative_offer_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔘 Узнать больше про Украину")],
-            [KeyboardButton(text="🔘 Связаться с координатором")],
+            [KeyboardButton(text="🇺🇦 Подробнее о программе")],
+            [KeyboardButton(text="💬 Хочу оставить заявку")],
         ],
         resize_keyboard=True
     )
@@ -161,9 +162,8 @@ def alternative_offer_keyboard():
 def final_cta_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔘 Связаться с координатором")],
-            [KeyboardButton(text="🔘 Оставить заявку")],
-            [KeyboardButton(text="🔘 Назад")],
+            [KeyboardButton(text="📲 Связаться с координатором")],
+            [KeyboardButton(text="🔙 Назад")],
         ],
         resize_keyboard=True
     )
@@ -176,7 +176,7 @@ dp.message.register(process_education, Form.education)
 dp.message.register(process_experience, Form.experience)
 dp.message.register(process_language, Form.language)
 dp.message.register(process_invitation, Form.invitation)
-dp.message.register(handle_low_chance_choice, F.text.lower().contains("реальное решение") | F.text.lower().contains("почему") | F.text.lower().contains("назад") | F.text.lower().contains("украину") | F.text.lower().contains("связаться") | F.text.lower().contains("заявку"))
+dp.message.register(handle_low_chance_choice, F.text.lower().contains("реальное решение") | F.text.lower().contains("хочу узнать") | F.text.lower().contains("почему") | F.text.lower().contains("назад") | F.text.lower().contains("украину") | F.text.lower().contains("связаться") | F.text.lower().contains("заявку"))
 dp.message.register(collect_user_name, Form.user_name)
 dp.message.register(collect_user_contact, Form.user_contact)
 dp.message.register(collect_user_comment, Form.user_comment)
