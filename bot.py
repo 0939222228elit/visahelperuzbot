@@ -4,7 +4,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import CommandStart
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from config import BOT_TOKEN, ADMIN_ID
+from config import BOT_TOKEN, 
+ADMIN_IDstart_text = (
+    "Добро пожаловать!\n\n"
+    "Этот бот поможет вам проверить шансы на получение визы в Германию и узнать о новом проекте по официальному трудоустройству в Европу!\n\n"
+    "Ответьте на несколько вопросов."
 import text_templates
 import questions
 
