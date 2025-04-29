@@ -3,12 +3,8 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from config import BOT_TOKEN, 
-ADMIN_IDstart_text = (
-    "Добро пожаловать!\n\n"
-    "Этот бот поможет вам проверить шансы на получение визы в Германию и узнать о новом проекте по официальному трудоустройству в Европу!\n\n"
-    "Ответьте на несколько вопросов."
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from config import BOT_TOKEN, ADMIN_ID
 import text_templates
 import questions
 
@@ -31,42 +27,36 @@ async def start(message: types.Message, state: FSMContext):
     await message.answer(questions.QUESTIONS[0])
     await state.set_state(Form.age)
 
-# Ввод возраста
 @dp.message(Form.age)
 async def process_age(message: types.Message, state: FSMContext):
     await state.update_data(age=message.text)
     await message.answer(questions.QUESTIONS[1])
     await state.set_state(Form.profession)
 
-# Ввод профессии
 @dp.message(Form.profession)
 async def process_profession(message: types.Message, state: FSMContext):
     await state.update_data(profession=message.text)
     await message.answer(questions.QUESTIONS[2])
     await state.set_state(Form.education)
 
-# Ввод образования
 @dp.message(Form.education)
 async def process_education(message: types.Message, state: FSMContext):
     await state.update_data(education=message.text)
     await message.answer(questions.QUESTIONS[3])
     await state.set_state(Form.experience)
 
-# Ввод опыта
 @dp.message(Form.experience)
 async def process_experience(message: types.Message, state: FSMContext):
     await state.update_data(experience=message.text)
     await message.answer(questions.QUESTIONS[4])
     await state.set_state(Form.language)
 
-# Ввод языка
 @dp.message(Form.language)
 async def process_language(message: types.Message, state: FSMContext):
     await state.update_data(language=message.text)
     await message.answer(questions.QUESTIONS[5])
     await state.set_state(Form.invitation)
 
-# Ввод приглашения
 @dp.message(Form.invitation)
 async def process_invitation(message: types.Message, state: FSMContext):
     await state.update_data(invitation=message.text)
@@ -79,7 +69,6 @@ async def process_invitation(message: types.Message, state: FSMContext):
 
     await state.clear()
 
-# Оценка ответов
 def evaluate_answers(data):
     score = 0
     try:
@@ -98,7 +87,7 @@ def evaluate_answers(data):
     if data['experience'].lower() == "да":
         score += 1
 
-    if data['language'].upper() == "B1":
+    if data['language'].strip().upper() == "B1":
         score += 1
 
     if data['invitation'].lower() == "да":
@@ -111,18 +100,15 @@ def evaluate_answers(data):
     else:
         return text_templates.low_chance_text, False
 
-# Генерация кнопок
 def generate_next_steps(is_high_chance):
     if is_high_chance:
-        return types.ReplyKeyboardRemove()
+        return ReplyKeyboardRemove()
     else:
-        markup = ReplyKeyboardMarkup(
+        return ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="Хочу узнать подробнее")]],
             resize_keyboard=True
         )
-        return markup
 
-# Ответ на кнопку "Хочу узнать подробнее"
 @dp.message(F.text.lower() == "хочу узнать подробнее")
 async def alternative_info(message: types.Message):
     await message.answer(text_templates.alternative_info_text)
