@@ -17,6 +17,12 @@ class Form(StatesGroup):
     experience = State()
     language = State()
     invitation = State()
+
+class AltStates(StatesGroup):
+    waiting_for_alternative = State()
+    waiting_for_program_info = State()
+    waiting_for_start_process = State()
+    waiting_for_application = State()
     user_name = State()
     user_contact = State()
     user_comment = State()
@@ -66,35 +72,45 @@ async def process_invitation(message: types.Message, state: FSMContext):
     if is_high_chance:
         await message.answer(result_text)
         await bot.send_message(ADMIN_ID, f"Анкета от {message.from_user.username or message.from_user.id}: {list(data.values())}")
+        await state.clear()
     else:
         await message.answer(text_templates.low_chance_intro, reply_markup=alternative_entry_keyboard())
+        await state.set_state(AltStates.waiting_for_alternative)
 
-    await state.clear()
-
-# FSM Responses After Low Chance Path
-async def handle_low_chance_choice(message: types.Message, state: FSMContext):
+# Alternative Path
+async def process_alternative(message: types.Message, state: FSMContext):
     text = message.text.lower()
-    if "узнать альтернативу" in text:
+    if "альтернативу" in text:
         await message.answer(text_templates.alternative_warning, reply_markup=alternative_more_keyboard())
-    elif "подробнее о программе" in text:
+        await state.set_state(AltStates.waiting_for_program_info)
+
+async def process_program_info(message: types.Message, state: FSMContext):
+    text = message.text.lower()
+    if "подробнее о программе" in text:
         await message.answer(text_templates.alternative_program, reply_markup=start_process_keyboard())
-    elif "хочу начать оформление" in text:
+        await state.set_state(AltStates.waiting_for_start_process)
+
+async def process_start_process(message: types.Message, state: FSMContext):
+    text = message.text.lower()
+    if "хочу начать оформление" in text:
         await message.answer(text_templates.alternative_steps, reply_markup=leave_request_keyboard())
-    elif "оставить заявку" in text:
+        await state.set_state(AltStates.waiting_for_application)
+
+async def process_leave_request(message: types.Message, state: FSMContext):
+    text = message.text.lower()
+    if "оставить заявку" in text:
         await message.answer("Пожалуйста, укажите ваше имя:")
-        await state.set_state(Form.user_name)
-    elif "назад" in text:
-        await message.answer(text_templates.low_chance_intro, reply_markup=alternative_entry_keyboard())
+        await state.set_state(AltStates.user_name)
 
 async def collect_user_name(message: types.Message, state: FSMContext):
     await state.update_data(user_name=message.text)
     await message.answer("Спасибо! Теперь введите номер телефона или email:")
-    await state.set_state(Form.user_contact)
+    await state.set_state(AltStates.user_contact)
 
 async def collect_user_contact(message: types.Message, state: FSMContext):
     await state.update_data(user_contact=message.text)
     await message.answer("Последний шаг: добавьте короткий комментарий или вопрос (или напишите 'нет'):")
-    await state.set_state(Form.user_comment)
+    await state.set_state(AltStates.user_comment)
 
 async def collect_user_comment(message: types.Message, state: FSMContext):
     await state.update_data(user_comment=message.text)
@@ -165,10 +181,13 @@ dp.message.register(process_education, Form.education)
 dp.message.register(process_experience, Form.experience)
 dp.message.register(process_language, Form.language)
 dp.message.register(process_invitation, Form.invitation)
-dp.message.register(handle_low_chance_choice, F.text.lower().contains("альтернативу") | F.text.lower().contains("программу") | F.text.lower().contains("оформление") | F.text.lower().contains("заявку") | F.text.lower().contains("назад"))
-dp.message.register(collect_user_name, Form.user_name)
-dp.message.register(collect_user_contact, Form.user_contact)
-dp.message.register(collect_user_comment, Form.user_comment)
+dp.message.register(process_alternative, AltStates.waiting_for_alternative)
+dp.message.register(process_program_info, AltStates.waiting_for_program_info)
+dp.message.register(process_start_process, AltStates.waiting_for_start_process)
+dp.message.register(process_leave_request, AltStates.waiting_for_application)
+dp.message.register(collect_user_name, AltStates.user_name)
+dp.message.register(collect_user_contact, AltStates.user_contact)
+dp.message.register(collect_user_comment, AltStates.user_comment)
 
 # Main
 async def main():
