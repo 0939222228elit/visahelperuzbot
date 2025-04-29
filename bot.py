@@ -80,7 +80,7 @@ async def handle_low_chance_choice(message: types.Message, state: FSMContext):
         await message.answer(text_templates.rejection_reasons, reply_markup=back_to_start_keyboard())
     elif "назад" in text:
         await message.answer(text_templates.low_chance_intro, reply_markup=low_chance_keyboard())
-    elif "узнать больше про украину" in text:
+    elif "узнать больше про украину" in text or "🇺🇦 подробнее о программе" in text:
         await message.answer(text_templates.ukraine_details, reply_markup=final_cta_keyboard())
     elif "связаться с координатором" in text:
         await message.answer("Пожалуйста, укажите ваше имя:")
@@ -176,7 +176,7 @@ dp.message.register(process_education, Form.education)
 dp.message.register(process_experience, Form.experience)
 dp.message.register(process_language, Form.language)
 dp.message.register(process_invitation, Form.invitation)
-dp.message.register(handle_low_chance_choice, F.text.lower().contains("реальное решение") | F.text.lower().contains("хочу узнать") | F.text.lower().contains("почему") | F.text.lower().contains("назад") | F.text.lower().contains("украину") | F.text.lower().contains("связаться") | F.text.lower().contains("заявку"))
+dp.message.register(handle_low_chance_choice, F.text.lower().contains("реальное решение") | F.text.lower().contains("хочу узнать") | F.text.lower().contains("почему") | F.text.lower().contains("назад") | F.text.lower().contains("украину") | F.text.lower().contains("связаться") | F.text.lower().contains("заявку") | F.text.lower().contains("🇺🇦"))
 dp.message.register(collect_user_name, Form.user_name)
 dp.message.register(collect_user_contact, Form.user_contact)
 dp.message.register(collect_user_comment, Form.user_comment)
