@@ -20,11 +20,6 @@ class Form(StatesGroup):
 
 class AltStates(StatesGroup):
     waiting_for_country = State()
-    country_ukraine = State()
-    country_armenia = State()
-    country_moldova = State()
-    country_georgia = State()
-    waiting_for_application = State()
     user_name = State()
     user_contact = State()
     user_comment = State()
@@ -35,7 +30,7 @@ dp = Dispatcher()
 async def type_and_send(message: types.Message, text: str, delay: float = 1.5):
     await message.bot.send_chat_action(message.chat.id, "typing")
     await asyncio.sleep(delay)
-    await message.answer(text)
+    await message.answer(text, parse_mode="Markdown")
 
 async def start(message: types.Message, state: FSMContext):
     await bot.send_message(ADMIN_ID, f"📥 Новый пользователь: @{message.from_user.username or message.from_user.id}")
@@ -83,19 +78,22 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await state.set_state(AltStates.waiting_for_country)
 
 async def choose_country(message: types.Message, state: FSMContext):
-    country_text = message.text.lower()
-    if "украина" in country_text:
+    country = message.text.lower()
+    if "назад" in country:
+        await type_and_send(message, text_templates.low_chance_intro)
+        await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
+        return
+    if "украина" in country:
         await type_and_send(message, text_templates.ukraine_text)
-    elif "армения" in country_text:
+    elif "армения" in country:
         await type_and_send(message, text_templates.armenia_text)
-    elif "молдова" in country_text:
+    elif "молдова" in country:
         await type_and_send(message, text_templates.moldova_text)
-    elif "грузия" in country_text:
+    elif "грузия" in country:
         await type_and_send(message, text_templates.georgia_text)
     else:
-        await message.answer("Пожалуйста, выберите страну из списка.")
+        await message.answer("Пожалуйста, выберите страну из предложенных вариантов.")
         return
-
     await message.answer("✍️ Хотите подать заявку? Укажите ваше имя:")
     await state.set_state(AltStates.user_name)
 
@@ -147,6 +145,11 @@ def country_choice_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇦🇲 Армения")],
+            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")],
+            [KeyboardButton(text="🔙 Назад")]
+        ],
+        resize_keyboard=True
+    ), KeyboardButton(text="🇦🇲 Армения")],
             [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")]
         ],
         resize_keyboard=True
