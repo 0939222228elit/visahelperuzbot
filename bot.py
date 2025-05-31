@@ -149,20 +149,6 @@ def country_choice_keyboard():
             [KeyboardButton(text="🔙 Назад")]
         ],
         resize_keyboard=True
-    ), KeyboardButton(text="🇦🇲 Армения")],
-            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")],
-            [KeyboardButton(text="🔙 Назад")]
-        ],
-        resize_keyboard=True
-    ), KeyboardButton(text="🇦🇲 Армения")],
-            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")],
-            [KeyboardButton(text="🔙 Назад")]
-        ],
-        resize_keyboard=True
-    ), KeyboardButton(text="🇦🇲 Армения")],
-            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")]
-        ],
-        resize_keyboard=True
     )
 
 dp.message.register(start, CommandStart())
@@ -182,3 +168,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
