@@ -11,7 +11,7 @@ import text_templates
 import questions
 
 def norm(text: str) -> str:
-    return text.strip().lower().replace("\\", "").replace("ё", "е")
+    return text.strip().lower().replace("\", "").replace("ё", "е")
 
 class Form(StatesGroup):
     age = State()
@@ -83,8 +83,7 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await bot.send_message(ADMIN_ID, f"Анкета от {message.from_user.username or message.from_user.id}: {list(data.values())}")
         await state.clear()
     else:
-        await type_and_send(message, result_text or "🔍 Мы не смогли оценить ваши данные.")
-        await type_and_send(message, text_templates.country_intro or "Есть альтернатива! Вы можете оформить ВНЖ через другие страны:")
+        await type_and_send(message, result_text)
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇲🇩 Молдова")],
                      [KeyboardButton(text="🇦🇲 Армения"), KeyboardButton(text="🇬🇪 Грузия")]],
@@ -99,11 +98,11 @@ async def choose_country(message: types.Message, state: FSMContext):
     if "украина" in country:
         await type_and_send(message, text_templates.ukraine_text)
     elif "армения" in country:
-        await type_and_send(message, text_templates.armenia_text)
+        await type_and_send(message, text_templates.armenia_info)
     elif "молдова" in country:
-        await type_and_send(message, text_templates.moldova_text)
+        await type_and_send(message, text_templates.moldova_info)
     elif "грузия" in country:
-        await type_and_send(message, text_templates.georgia_text)
+        await type_and_send(message, text_templates.georgia_info)
     else:
         await message.answer("Пожалуйста, выберите страну из предложенного списка ⬇️")
         return
@@ -135,7 +134,7 @@ async def collect_comment(message: types.Message, state: FSMContext):
         f"💬 Комментарий: {data.get('user_comment')}"
     )
     await bot.send_message(ADMIN_ID, text)
-    await message.answer("✅ Спасибо! Мы получили вашу заявку. Координатор скоро свяжется с вами.", reply_markup=ReplyKeyboardRemove())
+    await message.answer(text_templates.thank_you_text, reply_markup=ReplyKeyboardRemove())
     await state.clear()
 
 def evaluate_answers(data):
