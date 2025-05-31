@@ -11,7 +11,7 @@ import text_templates
 import questions
 
 def norm(text: str) -> str:
-    return text.strip().lower().replace("\", "").replace("ё", "е")
+    return text.strip().lower().replace("\\", "").replace("ё", "е")
 
 class Form(StatesGroup):
     age = State()
