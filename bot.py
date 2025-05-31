@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, ADMIN_ID
 import text_templates
 import questions
@@ -96,24 +96,29 @@ async def choose_country(message: types.Message, state: FSMContext):
     country = norm(message.text)
 
     if "украина" in country:
-        await type_and_send(message, text_templates.ukraine_info)
+        await type_and_send(message, text_templates.ukraine_full)
     elif "армения" in country:
-        await type_and_send(message, text_templates.armenia_info)
+        await type_and_send(message, text_templates.armenia_full)
     elif "молдова" in country:
-        await type_and_send(message, text_templates.moldova_info)
+        await type_and_send(message, text_templates.moldova_full)
     elif "грузия" in country:
-        await type_and_send(message, text_templates.georgia_info)
+        await type_and_send(message, text_templates.georgia_full)
     else:
         await message.answer("Пожалуйста, выберите страну из предложенного списка ⬇️")
         return
 
-    await message.answer("✍️ Пожалуйста, введите ваше имя:")
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🚀 Хочу подать заявку", callback_data="apply")]])
+    await message.answer("Хотите участвовать в этой программе?", reply_markup=markup)
+
+@dp.callback_query(F.data == "apply")
+async def on_apply_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("✍️ Пожалуйста, введите ваше имя:")
     await state.set_state(AltStates.user_name)
 
 @dp.message(AltStates.user_name)
 async def collect_name(message: types.Message, state: FSMContext):
     await state.update_data(user_name=message.text)
-    await message.answer("📞 Введите ваш номер телефона или email для связи:")
+    await message.answer("📞 Укажите ваш WhatsApp или Telegram для связи:")
     await state.set_state(AltStates.user_contact)
 
 @dp.message(AltStates.user_contact)
