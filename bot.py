@@ -10,6 +10,9 @@ from config import BOT_TOKEN, ADMIN_ID
 import text_templates
 import questions
 
+def norm(text: str) -> str:
+    return text.strip().lower().replace("\", "").replace("ё", "е")
+
 class Form(StatesGroup):
     age = State()
     profession = State()
@@ -91,7 +94,7 @@ async def process_invitation(message: types.Message, state: FSMContext):
 
 @dp.message(AltStates.waiting_for_country)
 async def choose_country(message: types.Message, state: FSMContext):
-    country = message.text.lower().strip().replace("\\", "")
+    country = norm(message.text)
 
     if "украина" in country:
         await type_and_send(message, text_templates.ukraine_text)
@@ -135,9 +138,39 @@ async def collect_comment(message: types.Message, state: FSMContext):
     await message.answer("✅ Спасибо! Мы получили вашу заявку. Координатор скоро свяжется с вами.", reply_markup=ReplyKeyboardRemove())
     await state.clear()
 
+def evaluate_answers(data):
+    score = 0
+    try:
+        age = int(data['age'])
+        if 20 <= age <= 55:
+            score += 1
+    except:
+        pass
+
+    if norm(data['profession']) in questions.VALID_PROFESSIONS:
+        score += 1
+
+    if norm(data['education']) in ["да", "yes", "есть"]:
+        score += 1
+
+    if norm(data['experience']) in ["да", "yes", "есть"]:
+        score += 1
+
+    if norm(data['language']) == "b1":
+        score += 1
+
+    if norm(data['invitation']) in ["да", "yes", "есть"]:
+        score += 1
+
+    percentage = int((score / 6) * 100)
+
+    if percentage >= 70:
+        return text_templates.high_chance_text, True
+    else:
+        return text_templates.low_chance_detailed, False
+
 async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
