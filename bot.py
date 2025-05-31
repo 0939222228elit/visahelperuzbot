@@ -74,6 +74,7 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await state.clear()
     else:
         await type_and_send(message, text_templates.low_chance_intro)
+        await type_and_send(message, text_templates.country_intro)
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
         await state.set_state(AltStates.waiting_for_country)
 
@@ -168,4 +169,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
