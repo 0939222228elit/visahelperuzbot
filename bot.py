@@ -75,20 +75,19 @@ async def process_invitation(message: types.Message, state: FSMContext):
     else:
         await type_and_send(message, text_templates.low_chance_detailed)
         await type_and_send(message, text_templates.country_intro)
-        await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
+        await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇲🇩 Молдова")],
+                     [KeyboardButton(text="🇦🇲 Армения"), KeyboardButton(text="🇬🇪 Грузия")]],
+            resize_keyboard=True
+        ))
         await state.set_state(AltStates.waiting_for_country)
 
 async def choose_country(message: types.Message, state: FSMContext):
-    state_data = await state.get_state()
-    if state_data != AltStates.waiting_for_country.state:
+    current = await state.get_state()
+    if current != AltStates.waiting_for_country.state:
         return
-    country = message.text.lower().strip().replace("\\", "")
 
-    if "назад" in country:
-        await type_and_send(message, text_templates.low_chance_detailed)
-        await type_and_send(message, text_templates.country_intro)
-        await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
-        return
+    country = message.text.lower().strip().replace("\\", "")
 
     if "украина" in country:
         await type_and_send(message, text_templates.ukraine_text)
@@ -99,8 +98,11 @@ async def choose_country(message: types.Message, state: FSMContext):
     elif "грузия" in country:
         await type_and_send(message, text_templates.georgia_text)
     else:
-        await message.answer("Пожалуйста, выберите страну из предложенных вариантов.")
+        await message.answer("Пожалуйста, выберите страну из предложенного списка ⬇️")
         return
 
-    await message.answer("✍️ Хотите подать заявку? Укажите ваше имя:")
+    await message.answer("✍️ Пожалуйста, введите ваше имя:")
     await state.set_state(AltStates.user_name)
+
+# Не забудь зарегистрировать choose_country в маршрутах: 
+# dp.message.register(choose_country, AltStates.waiting_for_country)
