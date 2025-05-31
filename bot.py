@@ -83,8 +83,8 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await bot.send_message(ADMIN_ID, f"Анкета от {message.from_user.username or message.from_user.id}: {list(data.values())}")
         await state.clear()
     else:
-        await type_and_send(message, text_templates.low_chance_detailed)
-        await type_and_send(message, text_templates.country_intro)
+        await type_and_send(message, result_text or "🔍 Мы не смогли оценить ваши данные.")
+        await type_and_send(message, text_templates.country_intro or "Есть альтернатива! Вы можете оформить ВНЖ через другие страны:")
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇲🇩 Молдова")],
                      [KeyboardButton(text="🇦🇲 Армения"), KeyboardButton(text="🇬🇪 Грузия")]],
