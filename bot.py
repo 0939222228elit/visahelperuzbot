@@ -150,6 +150,11 @@ def country_choice_keyboard():
         ],
         resize_keyboard=True
     ), KeyboardButton(text="🇦🇲 Армения")],
+            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")],
+            [KeyboardButton(text="🔙 Назад")]
+        ],
+        resize_keyboard=True
+    ), KeyboardButton(text="🇦🇲 Армения")],
             [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")]
         ],
         resize_keyboard=True
