@@ -11,7 +11,7 @@ import text_templates
 import questions
 
 def norm(text: str) -> str:
-    return text.strip().lower().replace("\", "").replace("ё", "е")
+    return text.strip().lower().replace("\\", "").replace("ё", "е")
 
 class Form(StatesGroup):
     age = State()
@@ -96,7 +96,7 @@ async def choose_country(message: types.Message, state: FSMContext):
     country = norm(message.text)
 
     if "украина" in country:
-        await type_and_send(message, text_templates.ukraine_text)
+        await type_and_send(message, text_templates.ukraine_info)
     elif "армения" in country:
         await type_and_send(message, text_templates.armenia_info)
     elif "молдова" in country:
