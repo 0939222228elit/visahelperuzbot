@@ -20,6 +20,7 @@ class Form(StatesGroup):
 
 class AltStates(StatesGroup):
     waiting_for_country = State()
+    country_ukraine = State()
     country_armenia = State()
     country_moldova = State()
     country_georgia = State()
@@ -81,21 +82,21 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
         await state.set_state(AltStates.waiting_for_country)
 
-# Country selection
 async def choose_country(message: types.Message, state: FSMContext):
-    text = message.text.lower()
-    if "армения" in text:
+    country_text = message.text.lower()
+    if "украина" in country_text:
+        await type_and_send(message, text_templates.ukraine_text)
+    elif "армения" in country_text:
         await type_and_send(message, text_templates.armenia_text)
-        await state.set_state(AltStates.waiting_for_application)
-    elif "молдова" in text:
+    elif "молдова" in country_text:
         await type_and_send(message, text_templates.moldova_text)
-        await state.set_state(AltStates.waiting_for_application)
-    elif "грузия" in text:
+    elif "грузия" in country_text:
         await type_and_send(message, text_templates.georgia_text)
-        await state.set_state(AltStates.waiting_for_application)
+    else:
+        await message.answer("Пожалуйста, выберите страну из списка.")
+        return
 
-async def process_application(message: types.Message, state: FSMContext):
-    await message.answer("✍️ Пожалуйста, укажите ваше имя:")
+    await message.answer("✍️ Хотите подать заявку? Укажите ваше имя:")
     await state.set_state(AltStates.user_name)
 
 async def collect_user_name(message: types.Message, state: FSMContext):
@@ -122,7 +123,6 @@ async def collect_user_comment(message: types.Message, state: FSMContext):
     await type_and_send(message, text_templates.thank_you_text)
     await state.clear()
 
-# Utils
 def evaluate_answers(data):
     score = 0
     try:
@@ -146,13 +146,12 @@ def evaluate_answers(data):
 def country_choice_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🇦🇲 Армения"), KeyboardButton(text="🇲🇩 Молдова")],
-            [KeyboardButton(text="🇬🇪 Грузия")]
+            [KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇦🇲 Армения")],
+            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")]
         ],
         resize_keyboard=True
     )
 
-# Handlers
 dp.message.register(start, CommandStart())
 dp.message.register(process_age, Form.age)
 dp.message.register(process_profession, Form.profession)
@@ -161,15 +160,12 @@ dp.message.register(process_experience, Form.experience)
 dp.message.register(process_language, Form.language)
 dp.message.register(process_invitation, Form.invitation)
 dp.message.register(choose_country, AltStates.waiting_for_country)
-dp.message.register(process_application, AltStates.waiting_for_application)
 dp.message.register(collect_user_name, AltStates.user_name)
 dp.message.register(collect_user_contact, AltStates.user_contact)
 dp.message.register(collect_user_comment, AltStates.user_comment)
 
-# Main
 async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
