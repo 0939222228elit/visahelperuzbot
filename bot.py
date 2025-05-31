@@ -80,14 +80,16 @@ async def process_invitation(message: types.Message, state: FSMContext):
 
 async def choose_country(message: types.Message, state: FSMContext):
     state_data = await state.get_state()
-    if state_data != AltStates.waiting_for_country.state:  # защитимся от случайных сообщений вне нужного состояния
+    if state_data != AltStates.waiting_for_country.state:
         return
-    country = message.text.lower()
+    country = message.text.lower().strip().replace("\\", "")
+
     if "назад" in country:
         await type_and_send(message, text_templates.low_chance_detailed)
         await type_and_send(message, text_templates.country_intro)
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
         return
+
     if "украина" in country:
         await type_and_send(message, text_templates.ukraine_text)
     elif "армения" in country:
@@ -99,77 +101,6 @@ async def choose_country(message: types.Message, state: FSMContext):
     else:
         await message.answer("Пожалуйста, выберите страну из предложенных вариантов.")
         return
+
     await message.answer("✍️ Хотите подать заявку? Укажите ваше имя:")
     await state.set_state(AltStates.user_name)
-
-async def collect_user_name(message: types.Message, state: FSMContext):
-    await state.update_data(user_name=message.text)
-    await message.answer("📞 Введите номер телефона или email:")
-    await state.set_state(AltStates.user_contact)
-
-async def collect_user_contact(message: types.Message, state: FSMContext):
-    await state.update_data(user_contact=message.text)
-    await message.answer("💬 Добавьте короткий комментарий или напишите 'нет':")
-    await state.set_state(AltStates.user_comment)
-
-async def collect_user_comment(message: types.Message, state: FSMContext):
-    await state.update_data(user_comment=message.text)
-    data = await state.get_data()
-    summary = (
-        f"📥 Новая заявка:\n"
-        f"👤 Имя: {data.get('user_name')}\n"
-        f"📞 Контакт: {data.get('user_contact')}\n"
-        f"💬 Комментарий: {data.get('user_comment')}\n"
-        f"🔗 Telegram: @{message.from_user.username or message.from_user.id}"
-    )
-    await bot.send_message(ADMIN_ID, summary)
-    await type_and_send(message, text_templates.thank_you_text)
-    await state.clear()
-
-def evaluate_answers(data):
-    score = 0
-    try:
-        age = int(data['age'])
-        if 20 <= age <= 55:
-            score += 1
-    except:
-        pass
-    if data['profession'].lower() in questions.VALID_PROFESSIONS:
-        score += 1
-    if data['education'].lower() == "да":
-        score += 1
-    if data['experience'].lower() == "да":
-        score += 1
-    if data['language'].strip().upper() == "B1":
-        score += 1
-    if data['invitation'].lower() == "да":
-        score += 1
-    return text_templates.high_chance_text, (score / 6) * 100 >= 70
-
-def country_choice_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🇺🇦 Украина"), KeyboardButton(text="🇦🇲 Армения")],
-            [KeyboardButton(text="🇲🇩 Молдова"), KeyboardButton(text="🇬🇪 Грузия")],
-            [KeyboardButton(text="🔙 Назад")]
-        ],
-        resize_keyboard=True
-    )
-
-dp.message.register(start, CommandStart())
-dp.message.register(process_age, Form.age)
-dp.message.register(process_profession, Form.profession)
-dp.message.register(process_education, Form.education)
-dp.message.register(process_experience, Form.experience)
-dp.message.register(process_language, Form.language)
-dp.message.register(process_invitation, Form.invitation)
-dp.message.register(choose_country, AltStates.waiting_for_country)
-dp.message.register(collect_user_name, AltStates.user_name)
-dp.message.register(collect_user_contact, AltStates.user_contact)
-dp.message.register(collect_user_comment, AltStates.user_comment)
-
-async def main():
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
