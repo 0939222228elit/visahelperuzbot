@@ -79,9 +79,13 @@ async def process_invitation(message: types.Message, state: FSMContext):
         await state.set_state(AltStates.waiting_for_country)
 
 async def choose_country(message: types.Message, state: FSMContext):
+    state_data = await state.get_state()
+    if state_data != AltStates.waiting_for_country.state:  # защитимся от случайных сообщений вне нужного состояния
+        return
     country = message.text.lower()
     if "назад" in country:
-        await type_and_send(message, text_templates.low_chance_intro)
+        await type_and_send(message, text_templates.low_chance_detailed)
+        await type_and_send(message, text_templates.country_intro)
         await message.answer("👇 Выберите страну, куда хотите поехать:", reply_markup=country_choice_keyboard())
         return
     if "украина" in country:
